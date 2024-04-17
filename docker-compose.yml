@@ -1,0 +1,67 @@
+version: '3.4'
+
+services:
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    restart: always
+    container_name: vaultwarden
+    environment:
+      - ADMIN_TOKEN
+      - PUSH_INSTALLATION_ID
+      - PUSH_INSTALLATION_KEY
+      - PUSH_ENABLED
+      - TZ
+    ports:
+      - '127.0.0.1:0:80'
+    volumes:
+      - ${VAULTWARDEN_DATA_PATH}:/data
+    networks:
+      - vaultwarden-network
+
+  tunnel:
+    container_name: vaultwarden-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN
+    networks:
+      - vaultwarden-network
+
+  backup:
+    image: ttionya/vaultwarden-backup:latest
+    restart: always
+    container_name: vaultwarden-backup
+    environment:
+      - TZ
+      - CRON
+      - RCLONE_REMOTE_NAME
+      - RCLONE_REMOTE_DIR
+      - ZIP_ENABLE
+      - ZIP_PASSWORD
+      - BACKUP_FILE_SUFFIX
+      - BACKUP_KEEP_DAYS
+      - PING_URL
+    volumes:
+      - ${VAULTWARDEN_DATA_PATH}:/bitwarden/data
+      - ${VAULTWARDEN_BACKUP_RCLONE_CONFIG_PATH}:/config/rclone
+
+  watchtower:
+    container_name: watchtower
+    restart: always
+    image: containrrr/watchtower
+    environment:
+      - WATCHTOWER_NOTIFICATIONS
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD
+      - WATCHTOWER_NOTIFICATION_EMAIL_DELAY
+      - WATCHTOWER_POLL_INTERVAL
+
+networks:
+  vaultwarden-network:
+    name: vaultwarden-network
